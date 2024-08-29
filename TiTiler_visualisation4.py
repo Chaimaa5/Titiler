@@ -14,9 +14,7 @@ url = ("https://opendata.digitalglobe.com"
 # Récupérer les métadonnées de l'image pour obtenir les limites
 r = httpx.get(
     f"{titiler_endpoint}/cog/info",
-    params={
-        "url": url,
-    }
+    params={"url": url}
 ).json()
 
 bounds = r["bounds"]
@@ -31,19 +29,16 @@ north = float(input("Entrez la latitude nord : "))
 if west < bounds[0] or east > bounds[2] or south < bounds[1] or north > bounds[3]:
     print("Erreur : Les coordonnées sont à l'extérieur de l'image.")
 else:
-    # Créer l'URL pour le découpage de l'image
-    # En utilisant l'extension Web Mercator (EPSG:3857) pour le découpage
+    # Créer l'URL de découpage pour le service Titiler
     clipping_url = (
         f"{titiler_endpoint}/cog/tiles/{url}?bbox={west},{south},{east},{north}&tilematrixset=WebMercatorQuad"
     )
 
     # Obtenir les propriétés de la carte à partir du COG
-    r = httpx.get(
-        f"{titiler_endpoint}/cog/WebMercatorQuad/tilejson.json",
-        params={"url": url}
-    ).json()
+    tilejson_url = f"{titiler_endpoint}/cog/WebMercatorQuad/tilejson.json"
+    r = httpx.get(tilejson_url, params={"url": url}).json()
 
-    # Création de la carte
+    # Créer la carte
     m = Map(
         location=((north + south) / 2, (west + east) / 2),
         zoom_start=13
@@ -51,13 +46,7 @@ else:
 
     # Ajouter la couche de tuile découpée
     TileLayer(
-        tiles=r["tiles"][0],
-        opacity=1,
-        attr="DigitalGlobe OpenData",
-        name='Image Satellite'
-    ).add_to(m)
-    TileLayer(
-        tiles=clipping_url,
+        tiles=r["tiles"][0],  # Utiliser le TileJSON pour obtenir les URL des tuiles
         opacity=1,
         attr="DigitalGlobe OpenData",
         name='Clipping Satellite Image'
